@@ -15,16 +15,65 @@ import re
 
 import pandas as pd
 import numpy as np
+from datetime import date
 
 import os
+import PySimpleGUI as sg
+sg.theme('DarkGrey12')   # Add a little color to your windows
 
 
-folder = 'E:/MSBA_UW/Project/PDFs/'
+today = str(date.today())
+layout = [      
+#    [sg.Menu(menu_def, tearoff=True)],      
+    [sg.Text('PDF to Excel Converter', size=(30, 1), justification='center', font=("Helvetica", 25), relief=sg.RELIEF_RIDGE)],    
+    [sg.Text('SPA report option outputs to excel file with data cleaned and stores added')],      
+    [sg.Text('Quick scan is a straight pdf to excel conversion')],       
+    [sg.Frame(layout=[    
+      #Radio buttons need to be the same group ID otherwise a user will be able to select both of them. "GROUP_ID" is the group_id 
+    [sg.Radio('SPA Report', "GROUP_ID", default=True, size=(11,1)), sg.Radio('Quick scan', "GROUP_ID")]], title='Options',title_color='orange', relief=sg.RELIEF_SUNKEN, 
+        tooltip=' Complete scan may take more than 60 minutes if records exceed 100 pages ')], 
+    [sg.Checkbox('output store performance sheet', size=(70,1))],   
+    [sg.Text('_'  * 80)],     
+    [sg.Text((''), size=(25, 2), text_color= 'red'),      
+       ],      
+    [sg.Text('_'  * 80)],      
+    [sg.Text('Choose a name for your report (lastname_report)')],     
+    [sg.Input(today+'-SPA-report')],
+    [sg.Text('Choose a location to save your results', size=(35, 1))],      
+    [sg.Text('Your Folder', size=(15, 1), auto_size_text=False, justification='right'),      
+        sg.InputText(''), sg.FolderBrowse()],
+    [sg.Text('_'  * 80)],      
+    [sg.Text('Choose a folder for where records are stored', size=(35, 1))],      
+    [sg.Text('Your Folder', size=(15, 1), auto_size_text=False, justification='right'),      
+        sg.InputText(''), sg.FolderBrowse()],      
+    [sg.Submit(tooltip='Click to submit this window'), sg.Cancel()]    
+]      
+
+
+window = sg.Window('PDF Converter', layout, default_element_size=(40, 1), grab_anywhere=False,keep_on_top= True)      
+
+event, values = window.read()    
+  
+    #Definitions of the dict values variables
+    #value[0] is the radio button for complete scan. Either True/False 
+    #value[1] is the radio button for quick scan. Either True/False
+    #value[2] the check box at the top of the form. Etiher True/False
+    #value[3] is the search terms that a user enters. Needs to be converted to an array and then searched through main records
+    #value[4] is the DPI setting for the pdf2image convert_from_path function. It increases the resolution for scanned pdfs. Needs to be in type int
+    #value[5] is the user generated report name
+    #value[6] is the location selected for results to be saved
+    #value[7] is the location selected for where the medical record is located
+    
+window.close()
+
+folder = values[7]
+
+out_path = values[6]
+
 dfObj = pd.DataFrame()
 pathvalue = 0
 pathcounter = []
 paths = [folder + fn for fn in os.listdir(folder) if fn.endswith('.pdf')]
-
 
 for path in paths:
     df = tabula.io.read_pdf(path, pages = 'all', pandas_options={'header': None})
@@ -40,19 +89,19 @@ for path in paths:
                 dfObj = dfObj.append(pd.DataFrame(df[value]), ignore_index=True)
                 value += 1
                 counter.append(value)
-    #dfObj = dfObj.append(pd.DataFrame(df[pathvalue]),ignore_index=True)
-    #pathvalue += 1
-#    pathcounter.append(pathvalue)
-           
+                
+                
+                
+                
+if values[1] is True:
+    writer = pd.ExcelWriter(out_path , engine='xlsxwriter')
+    dfObj.to_excel(writer, sheet_name='All Stores')
+    writer.save()
+    sg.popup('Completed!', 'Encoded %s files'%(maxnum+1))
 
-# -- DATA -- #
 
-#df = tabula.io.read_pdf(r"E:\MSBA_UW\Project\PDFs\Period 1 2020 SBA Dietz 123.pdf",pages = 'all', pandas_options={'header': None})
-
-
-
- #rename the column names to correct columns
-dfObj.columns = ['Code', 'Description', 'FY_2020_Qty', 'FY_2020_Sales', 'FY_2019_Qty', 'FY_2019_Sales', 'Per_Chg_Periods', 'YTD_This_Year_Qty', 'YTD_This_Yr_Sales', 'YTD_Last_Year_Qty', 'YTD_Last_Yr_Sales', 'Per_Chg_Yrs']
+if values[0] is True:
+    dfObj.columns = ['Code', 'Description', 'FY_2020_Qty', 'FY_2020_Sales', 'FY_2019_Qty', 'FY_2019_Sales', 'Per_Chg_Periods', 'YTD_This_Year_Qty', 'YTD_This_Yr_Sales', 'YTD_Last_Year_Qty', 'YTD_Last_Yr_Sales', 'Per_Chg_Yrs']
 
 
 #Find the period and append to a period column
@@ -105,15 +154,29 @@ listofstores=listofstores['Description']
 indexofstores = list(listofstores.index.values)
 storeval =0    
 firstnum = 0
-secondnumber = indexofstores[storeval] 
+secondnumber = (indexofstores[storeval]) 
 numofstores = len(listofstores)
-while storeval < numofstores:
+
+#while storeval < numofstores:
+
+#      tempdf = dfObj[firstnum:secondnumber]
+#      tempdf = tempdf.assign(Store_Name=listofstores[secondnumber])
+#     firstnum = secondnumber
+#     storeval += 1
+#     secondnumber = indexofstores[storeval]
+
+counter = 0
+
+for stores in listofstores:
 
       tempdf = dfObj[firstnum:secondnumber]
       tempdf = tempdf.assign(Store_Name=listofstores[secondnumber])
       firstnum = secondnumber
-      storeval += 1
-      counter.append(storeval)
+      secondnumber = indexofstores[counter]
+      counter = counter + 1
+      dfObj.update(tempdf)
+
+      #counter.append(storeval)
       
       
       #desincode_mask = tempdf['Code'].astype(str).str.contains(r' ', regex = False, na = False)
@@ -194,7 +257,6 @@ while storeval < numofstores:
           print('successfully updated')
 
       try:
-          secondnumber = indexofstores[storeval]
           dfObj.update(tempdf)
       except:
           print("continue on with life")    
@@ -205,10 +267,7 @@ while storeval < numofstores:
           
           #Run this because I'm lazy and want a clean dataset
           dfObj = dfObj[dfObj.Store_Name.str.startswith(r"Total", na = False)]
-          
-          
-          
-          out_path = r"E:/MSBA_UW/Project/temp-excel.xlsx"
+         
           writer = pd.ExcelWriter(out_path , engine='xlsxwriter')
           dfObj.to_excel(writer, sheet_name='All Stores')
           writer.save()
