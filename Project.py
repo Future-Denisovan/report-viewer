@@ -19,7 +19,7 @@ from datetime import date
 
 import os
 import PySimpleGUI as sg
-sg.theme('DarkGrey12')   # Add a little color to your windows
+sg.theme('Purple')   # Add a little color to your windows
 
 
 today = str(date.today())
@@ -30,7 +30,7 @@ layout = [
     [sg.Text('Quick scan is a straight pdf to excel conversion')],       
     [sg.Frame(layout=[    
       #Radio buttons need to be the same group ID otherwise a user will be able to select both of them. "GROUP_ID" is the group_id 
-    [sg.Radio('SPA Report', "GROUP_ID", default=True, size=(11,1)), sg.Radio('Quick scan', "GROUP_ID")]], title='Options',title_color='orange', relief=sg.RELIEF_SUNKEN, 
+    [sg.Radio('SPA Report', "GROUP_ID", default=True, size=(11,1)), sg.Radio('Quick scan', "GROUP_ID")]], title='Options',title_color='black', relief=sg.RELIEF_SUNKEN, 
         tooltip=' Complete scan may take more than 60 minutes if records exceed 100 pages ')], 
     [sg.Checkbox('output store performance sheet', size=(70,1))],   
     [sg.Text('_'  * 80)],     
@@ -43,7 +43,7 @@ layout = [
     [sg.Text('Your Folder', size=(15, 1), auto_size_text=False, justification='right'),      
         sg.InputText(''), sg.FolderBrowse()],
     [sg.Text('_'  * 80)],      
-    [sg.Text('Choose a folder for where records are stored', size=(35, 1))],      
+    [sg.Text('Choose a folder for where pdfs are stored', size=(35, 1))],      
     [sg.Text('Your Folder', size=(15, 1), auto_size_text=False, justification='right'),      
         sg.InputText(''), sg.FolderBrowse()],      
     [sg.Submit(tooltip='Click to submit this window'), sg.Cancel()]    
@@ -58,22 +58,29 @@ event, values = window.read()
     #value[0] is the radio button for complete scan. Either True/False 
     #value[1] is the radio button for quick scan. Either True/False
     #value[2] the check box at the top of the form. Etiher True/False
-    #value[3] is the search terms that a user enters. Needs to be converted to an array and then searched through main records
-    #value[4] is the DPI setting for the pdf2image convert_from_path function. It increases the resolution for scanned pdfs. Needs to be in type int
-    #value[5] is the user generated report name
-    #value[6] is the location selected for results to be saved
-    #value[7] is the location selected for where the medical record is located
+    #value[3] is the file naming field
+    #value[4] is the location selected for results to be saved
+    #value[5] is the location selected for where the records are located
     
 window.close()
 
-folder = values[7]
+folder = values[5] + '/'
+#Add error handling if user cancels
+if not folder:
+    sg.popup_cancel("Cancelled: Must browse to a folder with pdfs")
 
-out_path = values[6]
+out_path = values[4] + '/' + values[3] + '.xlsx'
+if not out_path:
+    sg.popup_cancel("Cancelled: Must select a location to output excel file")
 
 dfObj = pd.DataFrame()
 pathvalue = 0
 pathcounter = []
 paths = [folder + fn for fn in os.listdir(folder) if fn.endswith('.pdf')]
+if not paths:
+    sg.popup_cancel("Cancelled: Must browse to a folder with pdfs")
+
+
 
 for path in paths:
     df = tabula.io.read_pdf(path, pages = 'all', pandas_options={'header': None})
@@ -89,75 +96,85 @@ for path in paths:
                 dfObj = dfObj.append(pd.DataFrame(df[value]), ignore_index=True)
                 value += 1
                 counter.append(value)
+                sg.OneLineProgressMeter('Processing Reports', value + 1, maxnum, 'key', orientation = 'h')
+
                 
                 
                 
                 
 if values[1] is True:
-    writer = pd.ExcelWriter(out_path , engine='xlsxwriter')
+    writer = pd.ExcelWriter(out_path, engine='xlsxwriter')
     dfObj.to_excel(writer, sheet_name='All Stores')
     writer.save()
-    sg.popup('Completed!', 'Encoded %s files'%(maxnum+1))
+    sg.popup('Completed!', 'Converted %s pages'%(maxnum))
 
 
 if values[0] is True:
     dfObj.columns = ['Code', 'Description', 'FY_2020_Qty', 'FY_2020_Sales', 'FY_2019_Qty', 'FY_2019_Sales', 'Per_Chg_Periods', 'YTD_This_Year_Qty', 'YTD_This_Yr_Sales', 'YTD_Last_Year_Qty', 'YTD_Last_Yr_Sales', 'Per_Chg_Yrs']
+    #Find the period and append to a period column
+    listofperiods = []
+    listofperiods = dfObj[dfObj['FY_2020_Qty'].astype(str).str.contains(r'Period', na = False)].copy()
+    listofperiods = listofperiods['FY_2020_Qty'].copy()
+
+    indexofperiods = list(listofperiods.index.values)
+
+    
+    #add a column for store (and period)
+    dataframelength = len(dfObj)
+    #Add a final period and index because otherwise it won't fill in a period to the end of the dataframe
+    indexofperiods.append(dataframelength)
+    #Get the last period used in the dataframe
+    lastperiod = listofperiods.iat[-1]
+    lastperiod = lastperiod[1:-1]
+    #Combine this with the last index value and aadd to listofperiods
+    listofperiods.loc[dataframelength] = lastperiod
+    
+    storecollist = []
+    periodcollist = []
+    for i in range(dataframelength):
+        storecollist.append(i)
+        periodcollist.append(i)
+    storecol = pd.DataFrame(storecollist)
+    periodcol = pd.DataFrame(periodcollist)
+    dfObj['Period'] = periodcol
+    dfObj['Store_Name'] = storecol
 
 
-#Find the period and append to a period column
-listofperiods = []
-listofperiods = dfObj[dfObj['FY_2020_Qty'].astype(str).str.contains(r'Period', na = False)]
-listofperiods = listofperiods['FY_2020_Qty']
-indexofperiods = list(listofperiods.index.values)
-
-#add a column for store (and period)
-dataframelength = len(dfObj)
-storecollist = []
-periodcollist = []
-for i in range(dataframelength):
-    storecollist.append(i)
-    periodcollist.append(i)
-storecol = pd.DataFrame(storecollist)
-periodcol = pd.DataFrame(periodcollist)
-dfObj['Period'] = periodcol
-dfObj['Store_Name'] = storecol
 
 
+#Assign periods
+    periodval = 0
+    periodfirstnum = indexofperiods[0]
+    periodsecondnum = indexofperiods[periodval]
+    numofperiods = len(listofperiods)
+    while periodval <= numofperiods:
+            perioddf = dfObj[periodfirstnum:periodsecondnum]
+            perioddf = perioddf.assign(Period = listofperiods[periodfirstnum])
+            periodfirstnum = periodsecondnum
+            periodval += 1
+            counter.append(periodval)
+            try:
+                periodsecondnum = indexofperiods[periodval]
+                dfObj.update(perioddf)
+            except:
+                dfObj.update(perioddf)
+
+    #Make sure that store names are in the Description column notice there is a space after Total
+    mask = dfObj['Code'].str.startswith(r'Total ', na=False)
+    dfObj.loc[mask,'Description'] = dfObj['Code']
 
 
+    listofstores =[]#'Total PET CLUB WAREHOUSE', 'Total RIO GRANDE SERVICE CENTER', 'Total SUNBURST PET SUPPLIES'
+    #find all the store names, this will tell us how to find the beginning and end of each dataframe, as well as populate our last column
+    listofstores = dfObj[dfObj['Description'].str.startswith(r"Total", na = False)]
+    listofstores=listofstores['Description']
+    indexofstores = list(listofstores.index.values)
+    storeval =0    
+    firstnum = 0
+    secondnumber = (indexofstores[storeval]) 
+    numofstores = len(listofstores)
 
-periodval = 0
-periodfirstnum = 1
-periodsecondnum = indexofperiods[periodval]
-numofperiods = len(listofperiods)
-while periodval <= numofperiods:
-    perioddf = dfObj[periodfirstnum:periodsecondnum]
-    perioddf = perioddf.assign(Period = listofperiods[periodfirstnum])
-    periodfirstnum = periodsecondnum
-    periodval += 1
-    counter.append(periodval)
-    try:
-        periodsecondnum = indexofperiods[periodval]
-        dfObj.update(perioddf)
-    except:
-        dfObj.update(perioddf)
-
-#Make sure that store names are in the Description column notice there is a space after Total
-mask = dfObj['Code'].str.startswith(r'Total ', na=False)
-dfObj.loc[mask,'Description'] = dfObj['Code']
-
-
-listofstores =[]#'Total PET CLUB WAREHOUSE', 'Total RIO GRANDE SERVICE CENTER', 'Total SUNBURST PET SUPPLIES'
-#find all the store names, this will tell us how to find the beginning and end of each dataframe, as well as populate our last column
-listofstores = dfObj[dfObj['Description'].str.startswith(r"Total", na = False)]
-listofstores=listofstores['Description']
-indexofstores = list(listofstores.index.values)
-storeval =0    
-firstnum = 0
-secondnumber = (indexofstores[storeval]) 
-numofstores = len(listofstores)
-
-#while storeval < numofstores:
+    #while storeval < numofstores:
 
 #      tempdf = dfObj[firstnum:secondnumber]
 #      tempdf = tempdf.assign(Store_Name=listofstores[secondnumber])
@@ -165,9 +182,9 @@ numofstores = len(listofstores)
 #     storeval += 1
 #     secondnumber = indexofstores[storeval]
 
-counter = 0
-
-for stores in listofstores:
+    counter = 0
+    
+    for stores in listofstores:
 
       tempdf = dfObj[firstnum:secondnumber]
       tempdf = tempdf.assign(Store_Name=listofstores[secondnumber])
