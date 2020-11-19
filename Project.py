@@ -19,6 +19,8 @@ from datetime import date
 
 import os
 import PySimpleGUI as sg
+import xlsxwriter
+
 sg.theme('Purple')   # Add a little color to your windows
 
 
@@ -33,7 +35,7 @@ layout = [
     [sg.Radio('SPA Report', "GROUP_ID", default=True, size=(11,1)), sg.Radio('Quick scan', "GROUP_ID")]], title='Options',title_color='black', relief=sg.RELIEF_SUNKEN, 
         tooltip=' Complete scan may take more than 60 minutes if records exceed 100 pages ')], 
     [sg.Checkbox('output store performance sheet', size=(70,1))],   
-    [sg.Text('_'  * 80)],     
+    [sg.Checkbox('File to convert from is Excel', size=(70,1))],     
     [sg.Text((''), size=(25, 2), text_color= 'red'),      
        ],      
     [sg.Text('_'  * 80)],      
@@ -57,19 +59,20 @@ event, values = window.read()
     #Definitions of the dict values variables
     #value[0] is the radio button for complete scan. Either True/False 
     #value[1] is the radio button for quick scan. Either True/False
-    #value[2] the check box at the top of the form. Etiher True/False
-    #value[3] is the file naming field
-    #value[4] is the location selected for results to be saved
-    #value[5] is the location selected for where the records are located
+    #value[2] the check box for the performance reports Etiher True/False
+    #value[3] the check box for if the origional file is an excel Etiher True/False
+    #value[4] is the file naming field
+    #value[5] is the location selected for results to be saved
+    #value[6] is the location selected for where the records are located
     
 window.close()
 
-folder = values[5] + '/'
+folder = values[6] + '/'
 #Add error handling if user cancels
 if not folder:
     sg.popup_cancel("Cancelled: Must browse to a folder with pdfs")
 
-out_path = values[4] + '/' + values[3] + '.xlsx'
+out_path = values[5] + '/' + values[4] + '.xlsx'
 if not out_path:
     sg.popup_cancel("Cancelled: Must select a location to output excel file")
 
@@ -148,6 +151,7 @@ if values[0] is True:
     periodsecondnum = indexofperiods[periodval]
     numofperiods = len(listofperiods)
     while periodval <= numofperiods:
+            sg.OneLineProgressMeter('Determining periods and adding a column', periodval+1, numofperiods, key='-IMAGE-', orientation='h')
             perioddf = dfObj[periodfirstnum:periodsecondnum]
             perioddf = perioddf.assign(Period = listofperiods[periodfirstnum])
             periodfirstnum = periodsecondnum
@@ -183,15 +187,15 @@ if values[0] is True:
 #     secondnumber = indexofstores[storeval]
 
     counter = 0
-    
-    for stores in listofstores:
+    #for stores in listofstores: #Did I double name a variable
 
+    for stores in listofstores:
+      #sg.OneLineProgressMeter('Reading pdfs and checking that data is in correct fields', stores+1, len(listofstores), key='-IMAGE-', orientation='h')
       tempdf = dfObj[firstnum:secondnumber]
       tempdf = tempdf.assign(Store_Name=listofstores[secondnumber])
       firstnum = secondnumber
       secondnumber = indexofstores[counter]
       counter = counter + 1
-      dfObj.update(tempdf)
 
       #counter.append(storeval)
       
@@ -269,25 +273,67 @@ if values[0] is True:
               tempsplit4.columns = ['FY_2020_Qty','FY_2020_Sales']
               tempdf.update(tempsplit4)
       except:
-          print('error: could not split into two columns')
-      finally:
-          print('successfully updated')
-
-      try:
           dfObj.update(tempdf)
-      except:
-          print("continue on with life")    
-          dfObj.update(tempdf)
-          dfObj.dropna(subset = ["Code"], inplace = True)
-          dfObj  = dfObj[dfObj.Code != 'Code']
-          dfObj = dfObj.reset_index(drop = True)
+          print("continue on with life")
           
-          #Run this because I'm lazy and want a clean dataset
-          dfObj = dfObj[dfObj.Store_Name.str.startswith(r"Total", na = False)]
+      #try:#Need to fix the "Code" Column
+             # mask = dfObj['Code'].str.startswith(r'Total ', na=False)
+
+      finally:
+          dfObj.update(tempdf)
+    
+      
+    dfObj.update(tempdf)
+    dfObj.dropna(subset = ["Code"], inplace = True)
+    dfObj  = dfObj[dfObj.Code != 'Code']
+    dfObj = dfObj.reset_index(drop = True)
+              
+ #Run this because I'm lazy and want a clean dataset
+    dfObj = dfObj[dfObj.Store_Name.str.startswith(r"Total", na = False)]
          
-          writer = pd.ExcelWriter(out_path , engine='xlsxwriter')
-          dfObj.to_excel(writer, sheet_name='All Stores')
-          writer.save()
+    
+    
+    
+    
+    
+    #workbook = xlsxwriter.Workbook(out_path)
+   
+    
+    #worksheet = workbook.add_worksheet('All_Stores')
+    #worksheet.write(dfObj,[cell_format])
+    #workbook.close()
+
+
+    
+    
+    writer = pd.ExcelWriter(out_path , engine='xlsxwriter')
+    
+    dfObj.to_excel(writer, sheet_name='All Stores', index = False)
+    
+    workbook = writer.book
+    worksheet = writer.sheets['All Stores']
+    
+    (last_row, last_col) = dfObj.shape
+    
+    column_settings = [{'header': column} for column in dfObj.columns]
+
+    # Create a list of column headers, to use in add_table().
+    #column_settings = [{'header': column} for column in df.columns]
+     #Align cells left justified
+    #format = workbook.add_format()
+    #format.set_align('left')
+
+    # Add the Excel table structure. Pandas will add the data.
+    worksheet.add_table(0, 0, last_row, last_col-1,{'columns': column_settings})
+   
+    #worksheet.set_column(0, last_col - 1, format)
+
+    # Close the Pandas Excel writer and output the Excel file.
+    writer.save()
+    
+    
+        #Popup that tells our users where the files are at
+    sg.popup('View results at ' +  out_path)
       
 
           
