@@ -76,6 +76,22 @@ out_path = values[5] + '/' + values[4] + '.xlsx'
 if not out_path:
     sg.popup_cancel("Cancelled: Must select a location to output excel file")
 
+
+#Excel reading
+#if values[3] is True:
+#    paths = [folder + fn for fn in os.listdir(folder) if fn.endswith('.xlsx')]
+#    for path in paths:
+#
+#        dfObj = pd.read_excel(paths)
+
+
+
+
+
+
+
+
+
 dfObj = pd.DataFrame()
 pathvalue = 0
 pathcounter = []
