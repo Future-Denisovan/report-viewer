@@ -204,9 +204,22 @@ if values[0] is True:
 
     counter = 0
     #for stores in listofstores: #Did I double name a variable
+    lenlistofstores = len(listofstores)
+    
+    
+    # layout the Window
+    layout = [[sg.Text('A custom progress meter')],
+          [sg.ProgressBar(lenlistofstores, orientation='h', size=(20, 20), key='progbar')],
+          [sg.Cancel()]]
 
+# create the Window
+    window = sg.Window('Custom Progress Meter', layout)
+# loop that would normally do something useful   
+
+    
+    
     for stores in listofstores:
-      #sg.OneLineProgressMeter('Reading pdfs and checking that data is in correct fields', stores+1, len(listofstores), key='-IMAGE-', orientation='h')
+      #sg.OneLineProgressMeter('Reading pdfs and checking that data is in correct fields', stores+1, lenlistofstores, key='-IMAGE-', orientation='h')
       tempdf = dfObj[firstnum:secondnumber]
       tempdf = tempdf.assign(Store_Name=listofstores[secondnumber])
       firstnum = secondnumber
@@ -214,7 +227,12 @@ if values[0] is True:
       counter = counter + 1
 
       #counter.append(storeval)
-      
+       # check to see if the cancel button was clicked and exit loop if clicked
+      event, values = window.read(timeout=0)
+      if event == 'Cancel' or event == sg.WIN_CLOSED:
+          break
+        # update bar with loop value +1 so that bar eventually reaches the maximum
+      window['progbar'].update_bar(counter + 1)
       
       #desincode_mask = tempdf['Code'].astype(str).str.contains(r' ', regex = False, na = False)
       #codesplit = tempdf.loc[desincode_mask, 'Code'].str.split(' ', 1, expand=True)
@@ -340,13 +358,14 @@ if values[0] is True:
     #format.set_align('left')
 
     # Add the Excel table structure. Pandas will add the data.
-    worksheet.add_table(0, 0, last_row, last_col-1,{'columns': column_settings})
+    worksheet.add_table(0, 0, last_row, last_col-1,{'columns': column_settings })
    
     #worksheet.set_column(0, last_col - 1, format)
 
     # Close the Pandas Excel writer and output the Excel file.
     writer.save()
-    
+    # done with loop... need to destroy the window as it's still open
+    window.close()
     
         #Popup that tells our users where the files are at
     sg.popup('View results at ' +  out_path)
