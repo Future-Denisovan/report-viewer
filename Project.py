@@ -87,11 +87,20 @@ if not out_path:
 
 def get_rid_of_commas(column):
     
-    for fields in column:
-        fields = str(fields)
-        print(fields)
-        fields = fields.replace(',','')
-        print(fields)
+    rid_comma_mask = column.astype(str).str.contains(',',na = False)
+    comma_mask_tuple = dfObj.loc[rid_comma_mask, column]
+    comma_mask_index = list(comma_mask_tuple.index.values)
+    comma_mask_list = []
+    for i in comma_mask_tuple:
+              i = i.replace(',','')
+              
+              comma_mask_list.append(i)
+          
+            
+    commadf = pd.DataFrame(comma_mask_index)
+    commadf.set_index(0,inplace=True)
+    commadf['YTD_This_Year_Qty'] = comma_mask_list
+    dfObj.update(commadf) #Fix all this before running
 
 
 
@@ -332,39 +341,7 @@ if values[0] is True:
              dfObj.update(tempdf)
       except: print("didn't fix code column")
       
-      try:#From here on down fix before running
-          comma_mask = tempdf['YTD_This_Year_Qty'].astype(str).str.contains(',',na = False)
-          comma_mask_tuple = tempdf.loc[comma_mask, 'YTD_This_Year_Qty']
-          comma_mask_index = list(comma_mask_tuple.index.values)
-          comma_mask_list = []
-          for i in comma_mask_tuple:
-              i = i.replace(',','')
-              comma_mask_list.append(i)
-          
-            
-          commadf = pd.DataFrame(comma_mask_index)
-          commadf.set_index(0,inplace=True)
-          commadf['YTD_This_Year_Qty'] = comma_mask_list
-            
-          dfObj.update(tempdf) #Fix all this before running
-      except:   dfObj.update(tempdf)
-
-      try:
-          comma_mask = tempdf['YTD_Last_Year_Qty'].astype(str).str.contains(',',na = False)
-          comma_mask_tuple = tempdf.loc[comma_mask, 'YTD_Last_Year_Qty']
-          comma_mask_index = list(comma_mask_tuple.index.values)
-          comma_mask_list = []
-          for i in comma_mask_tuple:
-              i = i.replace(',','')
-              comma_mask_list.append(i)
-          
-            
-          commadf = pd.DataFrame(comma_mask_index)
-          commadf.set_index(0,inplace=True)
-          commadf['YTD_Last_Year_Qty'] = comma_mask_list
-            
-          dfObj.update(tempdf)
-          
+      
          
       finally:
           
@@ -394,13 +371,92 @@ if values[0] is True:
     dfObj = dfObj.reset_index(drop = True)
     
     
+    try:#From here on down fix before running
+          comma_mask = dfObj['YTD_This_Year_Qty'].astype(str).str.contains(',',na = False)
+          comma_mask_tuple = dfObj.loc[comma_mask, 'YTD_This_Year_Qty']
+          comma_mask_index = list(comma_mask_tuple.index.values)
+          comma_mask_list = []
+          for i in comma_mask_tuple:
+              i = i.replace(',','')
+              
+              comma_mask_list.append(i)
+          
+            
+          commadf = pd.DataFrame(comma_mask_index)
+          commadf.set_index(0,inplace=True)
+          commadf['YTD_This_Year_Qty'] = comma_mask_list
+            
+          dfObj.update(commadf) #Fix all this before running
+    
+    except: print("uh oh!")
+    try:
+          comma_mask2 = dfObj['YTD_Last_Year_Qty'].astype(str).str.contains(',',na = False)
+          comma_mask_tuple2 = dfObj.loc[comma_mask2, 'YTD_Last_Year_Qty']
+          comma_mask_index2 = list(comma_mask_tuple2.index.values)
+          comma_mask_list2 = []
+          for i in comma_mask_tuple2:
+              i = i.replace(',','')
+              comma_mask_list2.append(i)
+          
+            
+          commadf2 = pd.DataFrame(comma_mask_index2)
+          commadf2.set_index(0,inplace=True)
+          commadf2['YTD_Last_Year_Qty'] = comma_mask_list2
+            
+          dfObj.update(commadf2)
+    except:print("uh oh!")
+    try: #get_rid_of_commas(dfObj['FY_2020_Qty'])
+          comma_mask3 = dfObj['FY_2020_Qty'].astype(str).str.contains(',',na = False)
+          comma_mask_tuple3 = dfObj.loc[comma_mask3, 'FY_2020_Qty']
+          comma_mask_index3 = list(comma_mask_tuple3.index.values)
+          comma_mask_list3 = []
+          for i in comma_mask_tuple3:
+              i = i.replace(',','')
+              
+              comma_mask_list3.append(i)
+          
+            
+          commadf3 = pd.DataFrame(comma_mask_index3)
+          commadf3.set_index(0,inplace=True)
+          commadf3['FY_2020_Qty'] = comma_mask_list3
+            
+          dfObj.update(commadf3)
+    except:print("catestrophic failure")
+    try: #get_rid_of_commas(dfObj['FY_2019_Qty'])
+          comma_mask4 = dfObj['FY_2019_Qty'].astype(str).str.contains(',',na = False)
+          comma_mask_tuple4 = dfObj.loc[comma_mask4, 'FY_2019_Qty']
+          comma_mask_index4 = list(comma_mask_tuple4.index.values)
+          comma_mask_list4 = []
+          for i in comma_mask_tuple4:
+              i = i.replace(',','')
+              
+              comma_mask_list4.append(i)
+          
+            
+          commadf4 = pd.DataFrame(comma_mask_index4)
+          commadf4.set_index(0,inplace=True)
+          commadf4['FY_2019_Qty'] = comma_mask_list4
+            
+          dfObj.update(commadf4)
+    except:print("catestrophic failure")
+    
+    try:     dfObj[['FY_2020_Qty','FY_2019_Qty', 'YTD_This_Year_Qty', 'YTD_Last_Year_Qty']] =dfObj[['FY_2020_Qty','FY_2019_Qty', 'YTD_This_Year_Qty', 'YTD_Last_Year_Qty']].apply(pd.to_numeric)
+    except:print('Yikes!')
+    finally:print('yay!')
+
+
+    
+    
+    
+    
+    
     
     
     
     #set column types
     
-    dfObj[['FY_2020_Qty','FY_2019_Qty', 'YTD_This_Year_Qty', 'YTD_Last_Year_Qty']] =dfObj[['FY_2020_Qty','FY_2019_Qty', 'YTD_This_Year_Qty', 'YTD_Last_Year_Qty']].apply(pd.to_numeric)
-   
+  
+    
     
    #Need to remove all the commas
     #ValueError: Unable to parse string "3,275" at position 124
@@ -415,7 +471,7 @@ if values[0] is True:
     #workbook.close()
 
 
-    
+
     # Create a Pandas Excel writer using XlsxWriter as the engine.
     writer = pd.ExcelWriter(out_path , engine='xlsxwriter')
     # Convert the dataframe to an XlsxWriter Excel object.
@@ -445,22 +501,22 @@ if values[0] is True:
    # worksheet.set_column('I:I',per_format)#Sales
 
     
-  #  (last_row, last_col) = dfObj.shape
+    (last_row, last_col) = dfObj.shape
     
-    #column_settings = [{'header': 'Code', }, 
-    #                   {'header': 'Description', }, 
-    #                   {'header': 'FY_2020_Qty',}, 
-    #                   {'header': 'FY_2020_Sales', 'format': currency_format,}, 
-    #                   {'header': 'FY_2019_Qty', }, 
-    #                   {'header': 'FY_2019_Sales', 'format': currency_format,},
-    #                   {'header': 'Per_Chg_Periods',},
-    #                   {'header': 'YTD_This_Year_Qty'}, 
-    #                   {'header': 'YTD_This_Yr_Sales', 'format': currency_format,}, 
-    #                   {'header': 'YTD_Last_Year_Qty',}, 
-    #                   {'header': 'YTD_Last_Yr_Sales', 'format': currency_format,}, 
-    #                   {'header': 'Per_Chg_Yrs', }, 
-    #                   {'header': 'Period', }, 
-    #                   {'header': 'Store_Name', }]
+    column_settings = [{'header': 'Code', }, 
+                       {'header': 'Description', }, 
+                       {'header': 'FY_2020_Qty',}, 
+                       {'header': 'FY_2020_Sales',}, 
+                       {'header': 'FY_2019_Qty', }, 
+                       {'header': 'FY_2019_Sales', },
+                       {'header': 'Per_Chg_Periods',},
+                       {'header': 'YTD_This_Year_Qty'}, 
+                       {'header': 'YTD_This_Yr_Sales',}, 
+                       {'header': 'YTD_Last_Year_Qty',}, 
+                       {'header': 'YTD_Last_Yr_Sales', }, 
+                       {'header': 'Per_Chg_Yrs', }, 
+                       {'header': 'Period', }, 
+                       {'header': 'Store_Name', }]
 
     # Create a list of column headers, to use in add_table().
     #column_settings = [{'header': column} for column in df.columns]
@@ -469,7 +525,7 @@ if values[0] is True:
     #format.set_align('left')
 
     # Add the Excel table structure. Pandas will add the data.
-    #worksheet.add_table(0, 0, last_row, last_col-1,{'columns': column_settings }) 
+    worksheet.add_table(0, 0, last_row, last_col-1,{'columns': column_settings, 'style':'Table Style Light 11' }) 
    
     #worksheet.set_column(0, last_col - 1, format)
 
