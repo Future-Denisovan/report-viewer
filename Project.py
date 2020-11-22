@@ -85,7 +85,13 @@ if not out_path:
 #        dfObj = pd.read_excel(paths)
 
 
-
+def get_rid_of_commas(column):
+    
+    for fields in column:
+        fields = str(fields)
+        print(fields)
+        fields = fields.replace(',','')
+        print(fields)
 
 
 
@@ -208,7 +214,7 @@ if values[0] is True:
     
     
     # layout the Window
-    layout = [[sg.Text('A custom progress meter')],
+    layout = [[sg.Text('Fixing columns and misread fields....')],
           [sg.ProgressBar(lenlistofstores, orientation='h', size=(20, 20), key='progbar')],
           [sg.Cancel()]]
 
@@ -310,23 +316,94 @@ if values[0] is True:
           dfObj.update(tempdf)
           print("continue on with life")
           
-      #try:#Need to fix the "Code" Column
-             # mask = dfObj['Code'].str.startswith(r'Total ', na=False)
+      try:#Need to fix the "Code" Column
+             codemask = tempdf['Code'].astype(str).str.contains('#|NS|PV|Pure', na=False)
+             codesplit = tempdf.loc[codemask,'Code'].str.split(" ", 1 ,expand = True)
+             codesplit.columns= ['Code','Description']
+             txt = "apple#banana#cherry#orange"
+             
+             x = txt.split("#", 1)
+             tempdf.update(codesplit)
 
-      finally:
+
+
+
+
+             dfObj.update(tempdf)
+      except: print("didn't fix code column")
+      
+      try:#From here on down fix before running
+          comma_mask = tempdf['YTD_This_Year_Qty'].astype(str).str.contains(',',na = False)
+          comma_mask_tuple = tempdf.loc[comma_mask, 'YTD_This_Year_Qty']
+          comma_mask_index = list(comma_mask_tuple.index.values)
+          comma_mask_list = []
+          for i in comma_mask_tuple:
+              i = i.replace(',','')
+              comma_mask_list.append(i)
+          
+            
+          commadf = pd.DataFrame(comma_mask_index)
+          commadf.set_index(0,inplace=True)
+          commadf['YTD_This_Year_Qty'] = comma_mask_list
+            
+          dfObj.update(tempdf) #Fix all this before running
+      except:   dfObj.update(tempdf)
+
+      try:
+          comma_mask = tempdf['YTD_Last_Year_Qty'].astype(str).str.contains(',',na = False)
+          comma_mask_tuple = tempdf.loc[comma_mask, 'YTD_Last_Year_Qty']
+          comma_mask_index = list(comma_mask_tuple.index.values)
+          comma_mask_list = []
+          for i in comma_mask_tuple:
+              i = i.replace(',','')
+              comma_mask_list.append(i)
+          
+            
+          commadf = pd.DataFrame(comma_mask_index)
+          commadf.set_index(0,inplace=True)
+          commadf['YTD_Last_Year_Qty'] = comma_mask_list
+            
           dfObj.update(tempdf)
+          
+         
+      finally:
+          
+
+          dfObj.update(tempdf)
+
+
+
+          
+          
     
       
     dfObj.update(tempdf)
     dfObj.dropna(subset = ["Code"], inplace = True)
     dfObj  = dfObj[dfObj.Code != 'Code']
-    dfObj = dfObj.reset_index(drop = True)
               
- #Run this because I'm lazy and want a clean dataset
+ #Clean up the code column
     dfObj = dfObj[dfObj.Store_Name.str.startswith(r"Total", na = False)]
-         
+    #dfObj = dfObj[dfObj.Code.str.startswith(r"1|2|3|4|5|6|7|8|9|0",na=False)]
+    dfObj = dfObj[~dfObj.Code.str.startswith(r"Category",na=False)]
+    dfObj = dfObj[~dfObj.Code.str.startswith(r"Customer",na=False)]
+    dfObj = dfObj[~dfObj.Code.str.startswith(r"Code",na=False)]
+    dfObj = dfObj[~dfObj.Code.str.startswith(r"Total",na=False)]
+
+
+
+    dfObj = dfObj.reset_index(drop = True)
     
     
+    
+    
+    
+    #set column types
+    
+    dfObj[['FY_2020_Qty','FY_2019_Qty', 'YTD_This_Year_Qty', 'YTD_Last_Year_Qty']] =dfObj[['FY_2020_Qty','FY_2019_Qty', 'YTD_This_Year_Qty', 'YTD_Last_Year_Qty']].apply(pd.to_numeric)
+   
+    
+   #Need to remove all the commas
+    #ValueError: Unable to parse string "3,275" at position 124
     
     
     
@@ -339,17 +416,51 @@ if values[0] is True:
 
 
     
-    
+    # Create a Pandas Excel writer using XlsxWriter as the engine.
     writer = pd.ExcelWriter(out_path , engine='xlsxwriter')
-    
+    # Convert the dataframe to an XlsxWriter Excel object.
     dfObj.to_excel(writer, sheet_name='All Stores', index = False)
     
+    # Get the xlsxwriter workbook and worksheet objects.
     workbook = writer.book
     worksheet = writer.sheets['All Stores']
+
+    # Add some cell formats.
+    #currency_format = workbook.add_format({'num_format': '$#,##0'})
+    #cell_format = workbook.add_format()
+    #cell_format.set_align('left')    
+
+    #cell_format = workbook.add_format({'align': 'left'})
     
-    (last_row, last_col) = dfObj.shape
+    #per_format  =  workbook.add_format({'num_format': '0%'})
     
-    column_settings = [{'header': column} for column in dfObj.columns]
+   # worksheet.set_column('A:A',cell_format)#Code
+   # worksheet.set_column('B:B',cell_format)#Description
+   # worksheet.set_column('C:C',cell_format)#Qty
+    #worksheet.set_column('D:D',cell_format)#Sales
+   # worksheet.set_column('E:E',cell_format)#Qty
+   # worksheet.set_column('F:F',currency_format)#Sales
+   # worksheet.set_column('G:G',cell_format)#%Change
+   # worksheet.set_column('H:H',cell_format)#Qty
+   # worksheet.set_column('I:I',per_format)#Sales
+
+    
+  #  (last_row, last_col) = dfObj.shape
+    
+    #column_settings = [{'header': 'Code', }, 
+    #                   {'header': 'Description', }, 
+    #                   {'header': 'FY_2020_Qty',}, 
+    #                   {'header': 'FY_2020_Sales', 'format': currency_format,}, 
+    #                   {'header': 'FY_2019_Qty', }, 
+    #                   {'header': 'FY_2019_Sales', 'format': currency_format,},
+    #                   {'header': 'Per_Chg_Periods',},
+    #                   {'header': 'YTD_This_Year_Qty'}, 
+    #                   {'header': 'YTD_This_Yr_Sales', 'format': currency_format,}, 
+    #                   {'header': 'YTD_Last_Year_Qty',}, 
+    #                   {'header': 'YTD_Last_Yr_Sales', 'format': currency_format,}, 
+    #                   {'header': 'Per_Chg_Yrs', }, 
+    #                   {'header': 'Period', }, 
+    #                   {'header': 'Store_Name', }]
 
     # Create a list of column headers, to use in add_table().
     #column_settings = [{'header': column} for column in df.columns]
@@ -358,7 +469,7 @@ if values[0] is True:
     #format.set_align('left')
 
     # Add the Excel table structure. Pandas will add the data.
-    worksheet.add_table(0, 0, last_row, last_col-1,{'columns': column_settings })
+    #worksheet.add_table(0, 0, last_row, last_col-1,{'columns': column_settings }) 
    
     #worksheet.set_column(0, last_col - 1, format)
 
@@ -373,15 +484,32 @@ if values[0] is True:
 
           
 
-          
+#df = pd.DataFrame({'Numbers':    [1010, 2020, 3030, 2020, 1515, 3030, 4545],
+#                   'Percentage': [.1,   .2,   .33,  .25,  .5,   .75,  .45 ],
+#})
 
+# Create a Pandas Excel writer using XlsxWriter as the engine.
+#writer2 = pd.ExcelWriter(out_path, engine='xlsxwriter')
 
+# Convert the dataframe to an XlsxWriter Excel object.
+#df.to_excel(writer2, sheet_name='Sheet1')
 
+# Get the xlsxwriter workbook and worksheet objects.
+#workbook  = writer2.book
+#worksheet = writer2.sheets['Sheet1']
 
+# Add some cell formats.
+#format1 = workbook.add_format({'num_format': '#,##0.00'})
+#format2 = workbook.add_format({'num_format': '0%'})
 
+# Note: It isn't possible to format any cells that already have a format such
+# as the index or headers or any cells that contain dates or datetimes.
 
+# Set the column width and format.
+#worksheet.set_column('B:B', 18, format1)
 
+# Set the format but not the column width.
+#worksheet.set_column('C:C', None, format2)
+#writer2.save()
 
-
-
-
+    
