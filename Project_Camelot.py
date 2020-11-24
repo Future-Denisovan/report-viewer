@@ -104,11 +104,11 @@ if not paths:
     sg.popup_cancel("Cancelled: Must browse to a folder with pdfs")
 
 dfObj = pd.DataFrame()
-tablecounter = 0
 #tabula.io.build_options(stream = True)
 for path in paths:
-    tables = camelot.read_pdf(path, pages = '1-end', flavor="stream", strip_text=',')
-    
+    tables = camelot.read_pdf(path, pages = '1-end', flavor="stream" )#,strip_text=','
+    tablecounter = 0
+
     listoftables = tables.n
     counter = []
     value = 0
@@ -182,8 +182,8 @@ if values[0] is True:
                 dfObj.update(perioddf)
 
     #Make sure that store names are in the Description column notice there is a space after Total
-    mask = dfObj['Code'].str.startswith(r'Total ', na=False)
-    dfObj.loc[mask,'Description'] = dfObj['Code']
+    #mask = dfObj['Code'].str.startswith(r'Total ', na=False)
+    #dfObj.loc[mask,'Description'] = dfObj['Code']
 
 
     listofstores =[]#'Total PET CLUB WAREHOUSE', 'Total RIO GRANDE SERVICE CENTER', 'Total SUNBURST PET SUPPLIES'
@@ -193,10 +193,15 @@ if values[0] is True:
     indexofstores = list(listofstores.index.values)
     storeval =0    
     firstnum = 0
+    storecounter = []
     secondnumber = (indexofstores[storeval]) 
     numofstores = len(listofstores)
+    
 
-
+    
+    
+    
+    
     counter = 0
     #for stores in listofstores: #Did I double name a variable
     lenlistofstores = len(listofstores)
@@ -210,7 +215,7 @@ if values[0] is True:
     # create the Window
     #window = sg.Window('Custom Progress Meter', layout)
     # loop that would normally do something useful   
-
+    
     
     
     for stores in listofstores:
@@ -222,6 +227,9 @@ if values[0] is True:
       counter = counter + 1
       dfObj.update(tempdf)
 
+    tempdf = dfObj[firstnum:secondnumber]
+    tempdf = tempdf.assign(Store_Name=listofstores[secondnumber])
+    dfObj.update(tempdf)
 
       #counter.append(storeval)
        # check to see if the cancel button was clicked and exit loop if clicked
@@ -233,14 +241,14 @@ if values[0] is True:
       
       
       
-    dfObj.update(tempdf)
-    dfObj.dropna(subset = ["Code"], inplace = True)
+    #dfObj.update(tempdf)
+    #dfObj.dropna(subset = ["Code"], inplace = True) Does nothing
     dfObj  = dfObj[dfObj.Code != 'Code']
               
     #Clean up the code column
-    #dfObj = dfObj[dfObj.Store_Name.str.startswith(r"Total", na = False)]
-    dfObj = dfObj[~dfObj.Code.str.startswith(r"Category",na=False)]
-    dfObj = dfObj[~dfObj.Code.str.startswith(r"Customer",na=False)]
+    #dfObj = dfObj[dfObj.Store_Name.str.startswith(r"Total", na = False)] Does nothing
+    #dfObj = dfObj[~dfObj.Code.str.startswith(r"Category",na=False)] Does nothing
+    dfObj = dfObj[~dfObj.Code.str.startswith(r"Customer",na=False)] #removed one row
     dfObj = dfObj[~dfObj.Code.str.startswith(r"Code",na=False)]
     dfObj = dfObj[~dfObj.Code.str.startswith(r"T",na=False)]
 
@@ -259,10 +267,84 @@ if values[0] is True:
 
 
     dfObj = dfObj.reset_index(drop = True)
+    
+    
+    try:     dfObj[['FY_2020_Qty','FY_2019_Qty', 'YTD_This_Year_Qty', 'YTD_Last_Year_Qty']] =dfObj[['FY_2020_Qty','FY_2019_Qty', 'YTD_This_Year_Qty', 'YTD_Last_Year_Qty']].apply(pd.to_numeric)
+    except:print('Yikes!')
 
 
+ # Create a Pandas Excel writer using XlsxWriter as the engine.
+    writer = pd.ExcelWriter(out_path , engine='xlsxwriter')
+    # Convert the dataframe to an XlsxWriter Excel object.
+    dfObj.to_excel(writer, sheet_name='All Stores', index = False)
+    
+    # Get the xlsxwriter workbook and worksheet objects.
+    workbook = writer.book
+    worksheet = writer.sheets['All Stores']
+    
+   
 
-    display(dfObj.dtypes) 
+    # Add some cell formats.
+    currency_format = workbook.add_format({'num_format': '$#,##0.00_);($#,##0.00)'})
+    #cell_format = workbook.add_format()
+    #cell_format.set_align('left')    
+
+    #cell_format = workbook.add_format({'align': 'left'})
+    
+    #per_format  =  workbook.add_format({'num_format': '0%'})
+    
+   # worksheet.set_column('A:A',cell_format)#Code
+   # worksheet.set_column('B:B',cell_format)#Description
+   # worksheet.set_column('C:C',cell_format)#Qty
+    #worksheet.set_column('D:D',currency_format)#Sales
+   # worksheet.set_column('E:E',cell_format)#Qty
+   # worksheet.set_column('F:F',currency_format)#Sales
+   # worksheet.set_column('G:G',cell_format)#%Change
+   # worksheet.set_column('H:H',cell_format)#Qty
+    #worksheet.set_column('I:I',currency_format)#Sales
+    #worksheet.set_column(0, last_col - 1, format)
+
+    
+    (last_row, last_col) = dfObj.shape
+    
+    column_settings = [{'header': 'Code', }, 
+                       {'header': 'Description', }, 
+                       {'header': 'FY_2020_Qty',}, 
+                       {'header': 'FY_2020_Sales','format': currency_format,}, #'format':currency_format
+                       {'header': 'FY_2019_Qty', }, 
+                       {'header': 'FY_2019_Sales','format': currency_format, },
+                       {'header': 'Per_Chg_Periods',},
+                       {'header': 'YTD_This_Year_Qty'}, 
+                       {'header': 'YTD_This_Yr_Sales','format': currency_format,}, 
+                       {'header': 'YTD_Last_Year_Qty',}, 
+                       {'header': 'YTD_Last_Yr_Sales','format': currency_format,}, 
+                       {'header': 'Per_Chg_Yrs', }, 
+                       {'header': 'Period', }, 
+                       {'header': 'Store_Name', }]
+
+    # Create a list of column headers, to use in add_table().
+    #column_settings = [{'header': column} for column in df.columns]
+     #Align cells left justified
+    #format = workbook.add_format()
+    #format.set_align('left')
+
+    # Add the Excel table structure. Pandas will add the data.
+    worksheet.add_table(0, 0, last_row, last_col-1,{'columns': column_settings, 'style':'Table Style Light 11' }) 
+    if values[2] is True:
+        worksheet2 = workbook.add_worksheet('Store Performance')
+        
+   
+    
+
+    # Close the Pandas Excel writer and output the Excel file.
+    writer.save()
+    # done with loop... need to destroy the window as it's still open
+    window.close()
+    
+        #Popup that tells our users where the files are at
+    sg.popup('View results at ' +  out_path)
+    writer.close()
+      
 
 
 
