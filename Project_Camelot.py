@@ -28,7 +28,7 @@ layout = [
     [sg.Text('Number of Sheets', size=(13, 1)),sg.InputText('1', size= (5,1))],      
     [sg.Text((''), size=(25, 1), text_color= 'red'),      
        ],      
-    [sg.Text('Choose a name for your report (lastname_report)')],     
+    [sg.Text('Choose a name for your report:')],     
     [sg.Input(today+'-SPA-report')],
     [sg.Text('Choose a location to save your results', size=(35, 1))],      
     [sg.Text('Your Folder', size=(15, 1), auto_size_text=False, justification='right'),      
@@ -97,7 +97,8 @@ bignum = 1000000
 smallnum = 0
 while smallnum < bignum:
       smallnum = smallnum + 1
-      sg.popup_animated('E:\MSBA_UW\Project\Project_Folder\SpecialProject\Fetch.gif',message='Please wait while I fetch that...',background_color='Purple',time_between_frames=100,keep_on_top=True)
+      sg.popup_animated('E:\MSBA_UW\Project\Project_Folder\SpecialProject\Fetch.gif',message='Please wait while I fetch that...',time_between_frames=100,keep_on_top=True)
+sg.popup_animated(image_source=None)
 
 pathvalue = 0
 pathcounter = []
@@ -115,7 +116,7 @@ if values[3] is False:
     dfObj = pd.DataFrame()
     for path in paths:
         sg.OneLineProgressMeter('Processing Reports', pathvalue + 1, len(paths), 'key', orientation = 'h',size=(70,4))#
-        sg.popup_animated('E:\MSBA_UW\Project\Project_Folder\SpecialProject\Fetch.gif',message='Please wait while I fetch that...',background_color='Purple',time_between_frames=100,keep_on_top=True)
+        #sg.popup_animated('E:\MSBA_UW\Project\Project_Folder\SpecialProject\Fetch.gif',message='Please wait while I fetch that...',background_color='Purple',time_between_frames=100,keep_on_top=True)
         tables = camelot.read_pdf(path, pages = '1-end', flavor="stream" )#,strip_text=','
         tablecounter = 0
         
@@ -342,7 +343,7 @@ if values[0] is True:
     #format.set_align('left')
 
     # Add the Excel table structure. Pandas will add the data.
-    worksheet.add_table(0, 0, last_row, last_col-1,{'columns': column_settings, 'style':'Table Style Light 11' }) 
+    worksheet.add_table(0, 0, last_row, last_col-1,{'columns': column_settings, 'style':'Blue, Table Style Light 13' }) 
     if values[2] is True:
         worksheet2 = workbook.add_charsheet('Store_Performance')
         #chart = workbook.add_chart({'type': 'column'})
@@ -364,7 +365,7 @@ if values[0] is True:
     
         #Popup that tells our users where the files are at
     sg.popup_animated(image_source=None)
-    sg.popup('View results at ' +  out_path)
+    sg.popup('View results at ' +  out_path,keep_on_top=True)
 
     writer.close()
     
