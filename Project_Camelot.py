@@ -25,7 +25,7 @@ layout = [
     [sg.Checkbox('Output store performance sheet', size=(70,1))],   
     [sg.Checkbox('File to convert from is Excel', size=(70,1))],     
     [sg.Text('Excel File', size=(8, 1)), sg.Input(), sg.FileBrowse()],
-    [sg.Text('Number of Sheets', size=(13, 1)),sg.InputText('1', size= (5,1))],      
+     [sg.Text(('_'*80)), ],      #[sg.Text('Number of Sheets', size=(13, 1)),sg.InputText('1', size= (5,1))]
     [sg.Text((''), size=(25, 1), text_color= 'red'),      
        ],      
     [sg.Text('Choose a name for your report:')],     
@@ -51,15 +51,15 @@ event, values = window.read()
     #value[2] the check box for the performance reports Etiher True/False
     #value[3] the check box for if the origional file is an excel Etiher True/False
     #value[4] is the excel file, if any is selected
-    #value[5] is the number of sheets in the excel file
-    #value[6] is the file naming field
-    #value[7] is the location selected for results to be saved
-    #value[8] is the location selected for where the records are located
+    #value[5] is the file naming field
+    #value[6] is the location selected for results to be saved
+    #value[87] is the location selected for where the records are located
     
 window.close()
+dfObj = pd.DataFrame()
 
-folder = values[8] + '/'
-out_path = values[7] + '/' + values[6] + '.xlsx'
+folder = values[7] + '/'
+out_path = values[6] + '/' + values[5] + '.xlsx'
 #Add error handling if user cancels
 if not folder:
     sg.popup_cancel("Cancelled, user exited")
@@ -67,12 +67,12 @@ if not out_path:
     sg.popup_cancel("Cancelled: Must select a location to output excel file")
 
 ##################################DEF
-def reading_excel_SPA_report(values):
+def reading_excel_SPA_report(values,dfObj):
     print('reading excel spa report')
 
     #create a list of values for number of sheets in excel file   
     #sheetlist=[]
-    numberofsheets = int(values[5])
+    #numberofsheets = int(values[5])
     #l = -1
     #while l < numberofsheets:
     #    l=l+1
@@ -80,8 +80,8 @@ def reading_excel_SPA_report(values):
     #    sheetlist.append(l)
     #sheetset = set(sheetlist)
     #sheetdict = dict.fromkeys(sheetset)
-    pathforexcel=values[4]
-    dfObj = pd.read_excel(pathforexcel, header = 9, skiprows=(0))
+    pathforexcel=values
+    dfObj = pd.read_excel(pathforexcel, header = 9, skiprows=(0), )
     
     return(dfObj)
 ##################################DEF
@@ -93,31 +93,30 @@ def quick_scan(dfObj):
 ##################################
 
 
-bignum = 1000000
-smallnum = 0
-while smallnum < bignum:
-      smallnum = smallnum + 1
-      sg.popup_animated('E:\MSBA_UW\Project\Project_Folder\SpecialProject\Fetch.gif',message='Please wait while I fetch that...',time_between_frames=100,keep_on_top=True)
-sg.popup_animated(image_source=None)
+#bignum = 1000000
+#smallnum = 0
+#while smallnum < bignum:
+#      smallnum = smallnum + 1
+#      sg.popup_animated('E:\MSBA_UW\Project\Project_Folder\SpecialProject\Fetch.gif',message='Please wait while I fetch that...',time_between_frames=100,keep_on_top=True)
+#sg.popup_animated(image_source=None)
 
 pathvalue = 0
 pathcounter = []
 if values[3] is False:
     paths = [folder + fn for fn in os.listdir(folder) if fn.endswith('.pdf')]
-if not paths:
-    sg.popup_cancel("Cancelled: Must browse to a folder with pdfs")
+#if not paths:
+#    sg.popup_cancel("Cancelled: Must browse to a folder with pdfs")
 
 
 if values[3] is True:
-    reading_excel_SPA_report(values)
+    reading_excel_SPA_report(values[4],dfObj)
     
 
 if values[3] is False:
-    dfObj = pd.DataFrame()
     for path in paths:
-        sg.OneLineProgressMeter('Processing Reports', pathvalue + 1, len(paths), 'key', orientation = 'h',size=(70,4))#
+        sg.OneLineProgressMeter('Processing Reports', pathvalue + 1, len(paths), 'key', orientation = 'h',size=(70,4),keep_on_top=True)#
         #sg.popup_animated('E:\MSBA_UW\Project\Project_Folder\SpecialProject\Fetch.gif',message='Please wait while I fetch that...',background_color='Purple',time_between_frames=100,keep_on_top=True)
-        tables = camelot.read_pdf(path, pages = '1-end', flavor="stream" )#,strip_text=','
+        tables = camelot.read_pdf(path, pages = '1-end', flavor="stream" ,strip_text=',')
         tablecounter = 0
         
         listoftables = tables.n
@@ -126,7 +125,7 @@ if values[3] is False:
         pathvalue = pathvalue + 1
 
         while tablecounter < listoftables-1:
-            sg.OneLineProgressMeter('Processing Reports', tablecounter + 1, listoftables, 'key', orientation = 'h',size=(70,4))
+            sg.OneLineProgressMeter('Processing Reports', tablecounter + 1, listoftables, 'key', orientation = 'h',size=(70,4),keep_on_top=True)
             dfObj = dfObj.append(tables[tablecounter].df,ignore_index=True)
             tablecounter = tablecounter +1
             value += 1
@@ -343,7 +342,7 @@ if values[0] is True:
     #format.set_align('left')
 
     # Add the Excel table structure. Pandas will add the data.
-    worksheet.add_table(0, 0, last_row, last_col-1,{'columns': column_settings, 'style':'Blue, Table Style Light 13' }) 
+    worksheet.add_table(0, 0, last_row, last_col-1,{'columns': column_settings, 'style':' Table Style Light 13' }) 
     if values[2] is True:
         worksheet2 = workbook.add_charsheet('Store_Performance')
         #chart = workbook.add_chart({'type': 'column'})
