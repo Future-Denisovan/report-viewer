@@ -71,17 +71,19 @@ def reading_excel_SPA_report(values):
     print('reading excel spa report')
 
     #create a list of values for number of sheets in excel file   
-    sheetlist=[]
+    #sheetlist=[]
     numberofsheets = int(values[5])
-    l = -1
-    while l < numberofsheets:
-        l=l+1
-        print(l)
-        sheetlist.append(l)
-    sheetset = set(sheetlist)
-    sheetdict = dict.fromkeys(sheetset)
+    #l = -1
+    #while l < numberofsheets:
+    #    l=l+1
+    #    print(l)
+    #    sheetlist.append(l)
+    #sheetset = set(sheetlist)
+    #sheetdict = dict.fromkeys(sheetset)
+    pathforexcel=values[4]
+    dfObj = pd.read_excel(pathforexcel, header = 9, skiprows=(0))
     
-    dfObj = pd.read_excel('E:\MSBA_UW\Project\Project_Folder\SpecialProject\Period 13 2020 SBA Dietz 123.xlsx', header = 9, skiprows=(0), sheet_name = [sheetdict])
+    return(dfObj)
 ##################################DEF
 def quick_scan(dfObj):
     writer = pd.ExcelWriter(out_path, engine='xlsxwriter')
@@ -91,43 +93,45 @@ def quick_scan(dfObj):
 ##################################
 
 
-
+bignum = 1000000
+smallnum = 0
+while smallnum < bignum:
+      smallnum = smallnum + 1
+      sg.popup_animated('E:\MSBA_UW\Project\Project_Folder\SpecialProject\Fetch.gif',message='Please wait while I fetch that...',background_color='Purple',time_between_frames=100,keep_on_top=True)
 
 pathvalue = 0
 pathcounter = []
-if values[3] is True:
-    reading_excel_SPA_report(values)
-else:
-
+if values[3] is False:
     paths = [folder + fn for fn in os.listdir(folder) if fn.endswith('.pdf')]
 if not paths:
     sg.popup_cancel("Cancelled: Must browse to a folder with pdfs")
 
-dfObj = pd.DataFrame()
-#tabula.io.build_options(stream = True)
-for path in paths:
-    tables = camelot.read_pdf(path, pages = '1-end', flavor="stream" )#,strip_text=','
-    tablecounter = 0
 
-    listoftables = tables.n
-    counter = []
-    value = 0
-
-
-    #sg.OneLineProgressMeter('Processing Reports', path + 1, len(paths), 'key', orientation = 'h')
-
-
-
-    while tablecounter < listoftables-1:
-        dfObj = dfObj.append(tables[tablecounter].df,ignore_index=True)
-        tablecounter = tablecounter +1
-        sg.OneLineProgressMeter('Processing Reports', tablecounter + 1, listoftables-1, 'key', orientation = 'h')
-        value += 1
-        counter.append(value)
-
+if values[3] is True:
+    reading_excel_SPA_report(values)
     
-    
-                
+
+if values[3] is False:
+    dfObj = pd.DataFrame()
+    for path in paths:
+        sg.OneLineProgressMeter('Processing Reports', pathvalue + 1, len(paths), 'key', orientation = 'h',size=(70,4))#
+        sg.popup_animated('E:\MSBA_UW\Project\Project_Folder\SpecialProject\Fetch.gif',message='Please wait while I fetch that...',background_color='Purple',time_between_frames=100,keep_on_top=True)
+        tables = camelot.read_pdf(path, pages = '1-end', flavor="stream" )#,strip_text=','
+        tablecounter = 0
+        
+        listoftables = tables.n
+        counter = []
+        value = 0
+        pathvalue = pathvalue + 1
+
+        while tablecounter < listoftables-1:
+            sg.OneLineProgressMeter('Processing Reports', tablecounter + 1, listoftables, 'key', orientation = 'h',size=(70,4))
+            dfObj = dfObj.append(tables[tablecounter].df,ignore_index=True)
+            tablecounter = tablecounter +1
+            value += 1
+            counter.append(value)
+
+              
 if values[1] is True:
     quick_scan(dfObj)
 if values[0] is True:
@@ -155,6 +159,8 @@ if values[0] is True:
     for i in range(dataframelength):
         storecollist.append(i)
         periodcollist.append(i)
+        sg.OneLineProgressMeter('Adding new columns... ', i + 1, dataframelength, 'key', orientation = 'h')
+
     storecol = pd.DataFrame(storecollist)
     periodcol = pd.DataFrame(periodcollist)
     dfObj['Period'] = periodcol
@@ -226,18 +232,19 @@ if values[0] is True:
       secondnumber = indexofstores[counter]
       counter = counter + 1
       dfObj.update(tempdf)
-
+      #event, values = window.read(timeout=0)
+      #if event == 'Cancel' or event == sg.WIN_CLOSED:
+          #break
+        # update bar with loop value +1 so that bar eventually reaches the maximum
+      #window['progbar'].update_bar(counter + 1)
+#
     tempdf = dfObj[firstnum:secondnumber]
     tempdf = tempdf.assign(Store_Name=listofstores[secondnumber])
     dfObj.update(tempdf)
 
       #counter.append(storeval)
        # check to see if the cancel button was clicked and exit loop if clicked
-      #event, values = window.read(timeout=0)
-      #if event == 'Cancel' or event == sg.WIN_CLOSED:
-      #    break
-        # update bar with loop value +1 so that bar eventually reaches the maximum
-      #window['progbar'].update_bar(counter + 1)
+      
       
       
       
@@ -256,15 +263,21 @@ if values[0] is True:
     dfObj = dfObj[~dfObj.FY_2020_Qty.str.startswith(r"Fiscal", na = False)]
     dfObj = dfObj[~dfObj.FY_2020_Qty.str.startswith(r"Period",na=False)]
     dfObj = dfObj[~dfObj.FY_2020_Sales.str.startswith(r"T",na=False)]
+    dfObj = dfObj[~dfObj.FY_2020_Sales.str.startswith(r"F",na=False)]
+    dfObj = dfObj[~dfObj.FY_2020_Sales.str.startswith(r"P",na=False)]
+
+
 
     
     #Clean up Description and Fy2019Qty
     dfObj = dfObj[~dfObj.FY_2019_Qty.str.startswith(r"Tuffy", na = False)]
     dfObj = dfObj[~dfObj.Description.str.startswith(r"Category",na=False)]
     dfObj = dfObj[~dfObj.Description.str.startswith(r"Total",na=False)]
-
-
-
+    dfObj = dfObj[~dfObj.FY_2019_Sales.str.startswith(r"P",na=False)]
+    dfObj = dfObj[~dfObj.FY_2019_Sales.str.startswith(r"T",na=False)]
+    dfObj = dfObj[~dfObj.Description.str.startswith(r"USE",na=False)]
+    dfObj = dfObj[~dfObj.FY_2019_Qty.str.startswith(r"P",na=False)]
+    dfObj = dfObj[~dfObj.FY_2019_Qty.str.startswith(r"T",na=False)]
 
     dfObj = dfObj.reset_index(drop = True)
     
@@ -276,16 +289,16 @@ if values[0] is True:
  # Create a Pandas Excel writer using XlsxWriter as the engine.
     writer = pd.ExcelWriter(out_path , engine='xlsxwriter')
     # Convert the dataframe to an XlsxWriter Excel object.
-    dfObj.to_excel(writer, sheet_name='All Stores', index = False)
+    dfObj.to_excel(writer, sheet_name='All_Stores', index = False)
     
     # Get the xlsxwriter workbook and worksheet objects.
     workbook = writer.book
-    worksheet = writer.sheets['All Stores']
+    worksheet = writer.sheets['All_Stores']
     
    
 
     # Add some cell formats.
-    currency_format = workbook.add_format({'num_format': '$#,##0.00_);($#,##0.00)'})
+    currency_format = workbook.add_format({'num_format': '_($* #,##0.00_);_($* (#,##0.00);_($* "-"??_);_(@_)'})
     #cell_format = workbook.add_format()
     #cell_format.set_align('left')    
 
@@ -331,7 +344,15 @@ if values[0] is True:
     # Add the Excel table structure. Pandas will add the data.
     worksheet.add_table(0, 0, last_row, last_col-1,{'columns': column_settings, 'style':'Table Style Light 11' }) 
     if values[2] is True:
-        worksheet2 = workbook.add_worksheet('Store Performance')
+        worksheet2 = workbook.add_charsheet('Store_Performance')
+        #chart = workbook.add_chart({'type': 'column'})
+        #chart.add_series({'values': '=All_Stores!$A$1:$A$5'})
+        #chart.add_series({'values': '=All_Stores!$B$1:$B$5'})
+        #chart.add_series({'values': '=All_Stores!$C$1:$C$5'})
+
+        # Insert the chart into the worksheet.
+        #worksheet.insert_chart('A7', chart)
+
         
    
     
@@ -342,9 +363,15 @@ if values[0] is True:
     window.close()
     
         #Popup that tells our users where the files are at
+    sg.popup_animated(image_source=None)
     sg.popup('View results at ' +  out_path)
+
     writer.close()
-      
+    
+    
+   
+
+        
 
 
 
