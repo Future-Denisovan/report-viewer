@@ -90,7 +90,7 @@ if values[3] is False:
     for path in paths:
         sg.OneLineProgressMeter('Processing Reports', pathvalue + 1, len(paths), 'key', orientation = 'h',size=(70,4))#
         #sg.popup_animated('E:\MSBA_UW\Project\Project_Folder\SpecialProject\Fetch.gif',message='Please wait while I fetch that...',background_color='Purple',time_between_frames=100,keep_on_top=True)
-        tables = camelot.read_pdf(path, pages = '1-end', flavor="stream" ,strip_text=',|$')
+        tables = camelot.read_pdf(path, pages = '1-end', flavor="stream" ,strip_text=',|$',edge_tol=300)
         tablecounter = 0
         
         listoftables = tables.n
@@ -105,7 +105,18 @@ if values[3] is False:
             value += 1
             counter.append(value)
     dfObj.columns = ['Code', 'Description', 'FY_2020_Qty', 'FY_2020_Sales', 'FY_2019_Qty', 'FY_2019_Sales', 'Per_Chg_Periods', 'YTD_This_Year_Qty', 'YTD_This_Yr_Sales', 'YTD_Last_Year_Qty', 'YTD_Last_Yr_Sales', 'Per_Chg_Yrs']
+############################################################## Fix the code column in Period 10 Total Simply Diego's
+    codemask = dfObj['Code'].astype(str).str.contains('#|NS|PV|Pure', na=False)
+    codesplit = dfObj.loc[codemask,'Code'].str.split("\n", 1 ,expand = True)
+    codesplit.columns= ['Code','Description']
+    dfObj.update(codesplit)
+########################################################
+    totalmask =  dfObj['Code'].astype(str).str.contains('Total', na=False)
+    dfObj.loc[totalmask, 'Description'] = dfObj['Code']
+
+    
     #Find the period and append to a period column
+
     listofperiods = []
     listofperiods = dfObj[dfObj['FY_2020_Qty'].astype(str).str.contains(r'Period', na = False)].copy()
     listofperiods = listofperiods['FY_2020_Qty'].copy()
@@ -360,12 +371,15 @@ if values[3] is True:
 
 
     dfObj  = dfObj[dfObj.Code != 'Code']
+
               
     #Clean up the code column
 
     dfObj = dfObj[~dfObj.Code.str.startswith(r"Customer",na=False)] #removed one row
     dfObj = dfObj[~dfObj.Code.str.startswith(r"Code",na=False)]
     dfObj = dfObj[~dfObj.Code.str.startswith(r"T",na=False)]
+    dfObj = dfObj[~dfObj.Code.str.startswith(r" ",na=False)]
+
     dfObj.dropna(subset = ["Code"], inplace = True)
     dfObj.dropna(subset = ["Description"], inplace = True)
 
@@ -389,6 +403,9 @@ if values[3] is True:
     dfObj = dfObj[~dfObj.Description.str.startswith(r"USE",na=False)]
     dfObj = dfObj[~dfObj.FY_2019_Qty.str.startswith(r"P",na=False)]
     dfObj = dfObj[~dfObj.FY_2019_Qty.str.startswith(r"T",na=False)]
+    
+    dfObj.dropna(inplace = True)
+
 
     dfObj = dfObj.reset_index(drop = True)
     
